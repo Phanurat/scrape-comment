@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Facebook Scraper</title>
+</head>
+<body>
+<h2>Facebook Post Scraper</h2>
+<label>URL โพสต์:</label>
+<input type="text" id="url" size="60"><br><br>
+<label>จำนวน Scroll:</label>
+<input type="number" id="scroll" value="5"><br><br>
+<button id="scrapeBtn">Scrape</button>
+<pre id="output"></pre>
+<script>
+const { ipcRenderer } = require('electron');
+document.getElementById('scrapeBtn').addEventListener('click', async () => {
+    const url = document.getElementById('url').value;
+    const scrollTimes = parseInt(document.getElementById('scroll').value);
+    document.getElementById('output').innerText = "กำลัง scrape ...";
+    const res = await ipcRenderer.invoke('scrape-facebook', { url, scrollTimes });
+    if(res.success){
+        let text = res.msg + "\n\n";
+        res.comments.forEach((c,i)=>{
+            text += `${i+1}. ${c.name} (UID:${c.uid}) => ${c.comment}\n`;
+        });
+        document.getElementById('output').innerText = text;
+    } else {
+        document.getElementById('output').innerText = res.msg;
+    }
+});
+</script>
+</body>
+</html>
