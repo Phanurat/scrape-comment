@@ -7,7 +7,8 @@ const path = require('path');
 
 let mainWindow;
 
-function createWindow() {
+// --- Arrow function สำหรับสร้างหน้าต่าง ---
+const createWindow = () => {
     mainWindow = new BrowserWindow({
         width: 700,
         height: 400,
@@ -19,7 +20,7 @@ function createWindow() {
     });
 
     mainWindow.loadFile('index.html');
-}
+};
 
 // --- Electron GUI ---
 app.whenReady().then(() => {
@@ -48,13 +49,12 @@ ipcMain.handle('scrape-facebook', async (event, { url, scrollTimes }) => {
     await page.goto(url, { waitUntil: 'networkidle2' });
 
     // Scroll
-    let previousHeight;
-    for(let i=0;i<scrollTimes;i++){
-        previousHeight = await page.evaluate('document.body.scrollHeight');
-        await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
+    for (let i = 0; i < scrollTimes; i++) {
+        const previousHeight = await page.evaluate(() => document.body.scrollHeight);
+        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
         await new Promise(r => setTimeout(r, 2000));
-        let newHeight = await page.evaluate('document.body.scrollHeight');
-        if(newHeight === previousHeight) break;
+        const newHeight = await page.evaluate(() => document.body.scrollHeight);
+        if (newHeight === previousHeight) break;
     }
 
     // เอา HTML
@@ -64,6 +64,7 @@ ipcMain.handle('scrape-facebook', async (event, { url, scrollTimes }) => {
     // --- parse ด้วย Cheerio ---
     const $ = cheerio.load(html);
     const comments = [];
+
     $('div.xwib8y2.xpdmqnj.x1g0dm76.x1y1aw1k').each((i, el) => {
         const $el = $(el);
         const nameEl = $el.find('span, a').first();
@@ -71,24 +72,25 @@ ipcMain.handle('scrape-facebook', async (event, { url, scrollTimes }) => {
 
         let uid = null;
         let commentId = null;
+
         const aEl = $el.find('a[href*="profile.php"]').first();
-        if(aEl.length > 0){
+        if (aEl.length > 0) {
             const href = aEl.attr('href');
             const uidMatch = href.match(/profile\.php\?id=(\d+)/);
-            if(uidMatch) uid = uidMatch[1];
+            if (uidMatch) uid = uidMatch[1];
 
             const commentMatch = href.match(/comment_id=([a-zA-Z0-9_%]+)/);
-            if(commentMatch) commentId = decodeURIComponent(commentMatch[1]);
+            if (commentMatch) commentId = decodeURIComponent(commentMatch[1]);
         }
 
         const textSet = new Set();
         $el.find('span, div').each((j, child) => {
             const text = $(child).text().trim();
-            if(text && text !== name) textSet.add(text);
+            if (text && text !== name) textSet.add(text);
         });
 
         const comment = Array.from(textSet).join(' ');
-        if(comment.length > 0 || name !== 'Unknown'){
+        if (comment.length > 0 || name !== 'Unknown') {
             comments.push({ name, uid, commentId, comment });
         }
     });
